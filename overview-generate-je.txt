@@ -1,0 +1,83 @@
+Brief explanation of "generate-je.sh", a script used with poudriere-image(8)
+to generate a ZFS send stream. The generated stream is used to create a
+new jail or to update an existing jail (that was previously created by generate-je).
+
+When using this script, the results of poudriere-image are contolled by
+the -t flag. The two available options are "-t zfs+send" or "-t zfs+send+be".
+
+Before showing examples, this is the zfs context being operated in:
+    % zfs list -r zroot/JAIL
+    NAME         USED  AVAIL     REFER  MOUNTPOINT
+    zroot/JAIL    24K  82.2G       24K  none
+
+The first option, "-t zfs+send", generates a send stream used to create
+a new jail (required poudriere-image arguments omitted for brevity):
+    % poudriere image -t zfs+send -B ~/generate-je.sh -n stream
+
+The above command generates a send stream named "stream.full.zfs":
+    % cat stream.full.zfs | zfs recv -u zroot/JAIL/main
+
+After receiving the stream, the layout looks like:
+    % zfs list -r zroot/JAIL
+    NAME                             USED  AVAIL     REFER  MOUNTPOINT
+    zroot/JAIL                       609M  81.6G       24K  none
+    zroot/JAIL/main                  609M  81.6G       24K  none
+    zroot/JAIL/main/default          609M  81.6G      609M  none
+    zroot/JAIL/main/default/config    24K  81.6G       24K  none
+
+The second option, "-t zfs+send+be", generates a send stream to update
+an existing jail:
+    % poudriere image -t zfs+send+be -B ~/generate-je.sh -n stream
+
+The above command generates a send stream named "stream.je.zfs":
+    % cat stream.je.zfs | zfs recv -u zroot/JAIL/main/je
+
+After receiving the stream, the layout looks like:
+    % zfs list -r zroot/JAIL
+    NAME                             USED  AVAIL     REFER  MOUNTPOINT
+    zroot/JAIL                      1.19G  81.0G       24K  none
+    zroot/JAIL/main                 1.19G  81.0G       24K  none
+    zroot/JAIL/main/default          609M  81.0G      609M  none
+    zroot/JAIL/main/default/config    24K  81.0G       24K  none
+    zroot/JAIL/main/je               609M  81.0G      609M  none
+
+The config dataset contains data that is to persist between jail upgrades.
+For example, if the desire is to have /etc/rc.conf and /etc/master.passwd
+remain unchanged between upgrades, one can use poudriere-image's overlay
+directory feature accomplish this.
+
+First, an overlay directory needs to be created:
+    % mkdir /home/rew/overlay
+    % cd /home/rew/overlay
+
+Then, create symbolic links in the overlay directory for the files
+and/or directories that are to remain unchanged between upgrades:
+    % mkdir etc
+    % ln -s /config/rc.conf etc
+    % ln -s /config/master.passwd etc
+
+Now that the overlay directory is configured, run poudriere-image:
+    % poudriere image -t zfs+send -B ~/generate-je.sh -n stream -c /home/rew/overlay
+
+When creating a jail with an overlay directory, the config dataset will
+be bootstrapped with the files of interest, if the file/directory exists.
+Given the overlay example above, the config dataset will contain the default
+etc/master.passwd as it would be from a standard base installation of FreeBSD.
+
+It is important (i.e., necessary) to use the same overlay directory when
+generating a stream to upgrade an existing jail:
+    % poudriere image -t zfs+send+be -B ~/generate-je.sh -n stream -c /home/rew/overlay
+
+The reason for this is so the symbolic link gets hooked up to etc/master.passwd
+correctly. Otherwise, the symbolic link will not exist and the contents of
+etc/master.passwd will be that from a standard base install.
+
+ZFS user properties set by generate-je.sh:
+	je:version                      (e.g., 12.2-RELEASE-p8)
+    je:poudriere:create             (create jail stream was generated)
+	je:poudriere:jailname           (name of poudriere jail used)
+	je:poudriere:overlaydir         (name of overlay directory used)
+	je:poudriere:packagelist        (name of package list used) 
+	je:poudriere:freebsd_version    (output of uname -U => 1301000)
+
+These properties are used by jectl.
