@@ -1,0 +1,18 @@
+To build and install:
+
+% cd /usr/src/sbin
+% git clone git@github.com:KlaraSystems/jectl.git jectl
+% cd jectl
+% make && make install
+
+jectl --help
+
+See overview-jectl.txt for tool usage. This needs to be converted
+into a manual page.
+
+overview-zfs-layout.txt gives a brief explanation of how jectl
+manipulates zfs datasets.
+
+overview-generate-je.txt explains how to create jail environments
+using poudriere-image(8) and generate-je.sh. The created jail
+environments are meant to be consumed by jectl.
