@@ -22,7 +22,7 @@ See overview-generate-je.txt and overview-zfs-layout.txt as well.
 A walkthrough of usage:
 
 See or search MANPAGE in this document for explanation of flags:
-    % jectl --help
+    % jectl
 
 Run the following before/after jectl commands to see what's happening:
     % zfs list -r zroot/JE zroot/JAIL
@@ -35,23 +35,25 @@ Generate a ZFS send stream using poudriere-image(8) and generate-je.sh:
     [00:00:23] Image available at: /home/rew/stream.full.zfs
 
 Create a jail dataset named klara from the generated ZFS stream:
-    % cat stream.full.zfs | jectl --import=klara
+    % cat stream.full.zfs | jectl import klara
 
 Where 'klara' corresponds to a jail defined in jail.conf(5):
 
     path = /$name;
-    exec.prepare = "jectl --jail=$name --mount=$path";
+    exec.prepare = "jectl mount $name $path";
     exec.start = "/bin/sh /etc/rc";
     exec.stop = "/bin/sh /etc/rc.shutdown";
 
     klara { }
 
 Check info for klara jail:
-    % jectl --jail=klara --info
-    je:active=zroot/JAIL/klara/default
-    je:poudriere:freebsd_version=1200086
-    je:version=12.0-RELEASE
-    je:poudriere:jailname=rew
+    % jectl dump klara
+    Jail name: klara
+    Environments:
+    1.  Name:              default (ACTIVE)
+        branch:            12.0-RELEASE-p13
+        version:           1200086
+        poudriere-jail:    rew
 
 Starting and stopping the jail behaves as normal:
     % service jail start
@@ -73,17 +75,23 @@ Note that passing -t zfs+send+be creates a jail environment only:
     [00:00:37] Image available at: /home/rew/stream.je.zfs
 
 Import the generated ZFS stream:
-    % cat stream.je.zfs | jectl --import=12.1-RELEASE
+    % cat stream.je.zfs | jectl import 12.1-RELEASE
 
 Set the active jail environment for the klara jail:
-    % jectl --jail=klara --set-je=12.1-RELEASE
+    % jectl activate klara 12.1-RELEASE
 
 Check the updated info for klara jail:
-    % jectl --jail=klara --info
-    je:active=zroot/JAIL/klara/12.1-RELEASE
-    je:poudriere:freebsd_version=1201000
-    je:version=12.1-RELEASE-p13
-    je:poudriere:jailname=next
+    % jectl dump klara
+    Jail name: klara
+    Environments:
+    1.  Name:              default (ACTIVE)
+        branch:            12.0-RELEASE-p13
+        version:           1200086
+        poudriere-jail:    rew
+    2.  Name:              12.1-RELEASE
+        branch:            12.1-RELEASE-p13
+        version:           1201000
+        poudriere-jail:    next
 
 The next time the klara jail is started, it will be running the newer version of FreeBSD.
 
@@ -97,30 +105,40 @@ Once the poudriere jail is updated, generate a jail environment from it:
     [00:00:21] Image available at: /home/rew/stream.je.zfs
 
 And then import it:
-    % cat stream.je.zfs | jectl --import=12.2-RELEASE
+    % cat stream.je.zfs | jectl import 12.2-RELEASE
 
-Inspect the imported jail environment (notice omitted --jail flag):
-    % jectl --info=12.2-RELEASE
-    je:poudriere:freebsd_version=1202000
-    je:version=12.2-RELEASE-p15
-    je:poudriere:jailname=next
+Inspect the imported jail environment:
+    % jectl dump
+    [ ... snippped .. ]
+    Available jail environments:
+    [ ... snippped .. ]
+    3.  Name:              12.2-RELEASE
+        branch:            12.2-RELEASE-p15
+        version:           1202000
+        poudriere-jail:    next
 
 Before updating, check active jail environment of klara:
-    % jectl --jail=klara --info
-    je:active=zroot/JAIL/klara/12.1-RELEASE
-    je:poudriere:freebsd_version=1201000
-    je:version=12.1-RELEASE-p13
-    je:poudriere:jailname=next
+    % jectl dump klara
+    Jail name: klara
+    Environments:
+    [ ... snippped .. ]
+    2.  Name:              12.1-RELEASE (ACTIVE)
+        branch:            12.1-RELEASE-p13
+        version:           1201000
+        poudriere-jail:    next
 
 Then update klara jail:
-    % jectl --jail=klara --update
+    % jectl update klara
 
 Verify that it updated:
-    % jectl --jail=klara --info
-    je:active=zroot/JAIL/klara/12.2-RELEASE
-    je:poudriere:freebsd_version=1202000
-    je:version=12.2-RELEASE-p15
-    je:poudriere:jailname=next
+    % jectl dump klara
+    Jail name: klara
+    Environments:
+    [ ... snippped .. ]
+    3.  Name:              12.2-RELEASE (ACTIVE)
+        branch:            12.2-RELEASE-p15
+        version:           1202000
+        poudriere-jail:    next
 
 When jectl does an update, it compares the following properties between
 the active jail environment dataset and imported jail environment datasets.
@@ -154,68 +172,3 @@ Restart the klara jail:
     % service jail restart
 
 Assuming no errors, the klara jail will now be running 13.1-BETA2
-
-MANPAGE: this needs to be compressed into a man page:
-
---jail=<jailname>:
-
-    * required for --update, --umount, --set-je, and --mount
-
---import=<jailname|jailenv> flag:
-
-    *   When this flag is used, all other flags are ignored.
-
-    *   Imports a zfs stream into zroot/JAIL or zroot/JE.
-
-    *   When importing a zfs stream that was generated using zfs+send,
-        a new dataset is created under zroot/JAIL/$jailname
-
-    *   When importing a zfs stream generated from zfs+send+be, the
-        jail environment dataset is received into zroot/JE/$jailenv
-
---set-je=<jailenv>:
-
-    *   --jail flag is required
-
-    *   set active jail environment for the given jail
-
-    *   The requested jail environment is first searched for under the
-        zroot/JAIL/$jailname/$jailenv. If not found, zroot/JE/$jailenv is
-        searched. If found in zroot/JE, the jail environment is cloned
-        over to zroot/JAIL/$jailname/$jailenv.
-
---update:
-
-    *   --jail flag is required
-
-    *   Compares ZFS properties of the active jail environment dataset
-        with the jail environment datasets that reside in zroot/JE. If
-        a newer version is detected, the jail environment is cloned from
-        zroot/JE to zroot/JAIL/$jailname/$jailenv
-
---umount:
-
-    *   --jail flag required
-
-    *   unmount the active jail environment
-
---mount=<mountpoint>:
-
-    * --jail flag required
-
-    * mount active jail environment to <mountpoint>
-
---info | --info=<jailenv>:
-
-    * print ZFS user properties used by jectl
-
-    * When --info is called with no argument, the --jail flag must be specifed.
-
-    * Print active jail environment for a given jail
-    % jectl --info --jail=klara
-
-    * Print a specific (i.e., non-active) jail environment that belongs to klara
-    % jectl --info=12.2-RELEASE --jail=klara
-
-    * Print info for a jail environment that was imported into zroot/JE
-    % jectl --info=12.2-RELEASE
