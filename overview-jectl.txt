@@ -155,9 +155,9 @@ not bumped, an update is not recognized. List of properties:
 
 With all that explained, consider the following workflow.
 
-Pass --update flag to jectl in jail.conf(5):
+Use the jectl's update subcommand in jail.conf(5):
     path = /$name;
-    exec.prepare = "jectl --jail=$name --mount=$path --update";
+    exec.prepare = "jectl update $name $path";
     exec.start = "/bin/sh /etc/rc";
     exec.stop = "/bin/sh /etc/rc.shutdown";
 
@@ -166,7 +166,7 @@ Pass --update flag to jectl in jail.conf(5):
 Update the poudriere jail, generate a stream, and import it.
     % poudriere jail -u -j next -t 13.1-BETA2
     % poudriere image -t zfs+send+be -B generate-je.sh -s 1G -j next -o /home/rew -n stream
-    % cat stream.je.zfs | jectl --import=13.1-BETA2
+    % cat stream.je.zfs | jectl import 13.1-BETA2
 
 Restart the klara jail:
     % service jail restart
