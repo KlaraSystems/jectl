@@ -34,9 +34,10 @@ gather_cb(zfs_handle_t *zhp, void *arg __unused)
 {
 	get_all_cb_t *cb = arg;
 
-	if (zfs_get_type(zhp) == ZFS_TYPE_FILESYSTEM)
+	if (zfs_get_type(zhp) == ZFS_TYPE_FILESYSTEM) {
 		libzfs_add_handle(cb, zhp);
-	else
+		zfs_iter_filesystems(zhp, gather_cb, cb);
+	} else
 		zfs_close(zhp);
 
 	return (0);
@@ -92,9 +93,9 @@ je_mount(zfs_handle_t *jds, const char *mountpoint)
 	}
 
 	libzfs_add_handle(&cb, je);
-	zfs_iter_dependents(je, B_TRUE, gather_cb, &cb);
+	zfs_iter_filesystems(je, gather_cb, &cb);
 	zfs_foreach_mountpoint(lzh, cb.cb_handles, cb.cb_used,
-	    mount_one, NULL, B_TRUE);
+	    mount_one, NULL, B_FALSE);
 
 	return (0);
 }
