@@ -5,7 +5,8 @@ To build and install:
 % cd jectl
 % make && make install
 
-jectl --help
+To see usage:
+% jectl
 
 See overview-jectl.txt for tool usage. This needs to be converted
 into a manual page.
