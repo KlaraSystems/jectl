@@ -60,14 +60,36 @@ je_mount(zfs_handle_t *jds, const char *mountpoint)
 	zfs_handle_t *je;
 	get_all_cb_t cb = { 0 };
 
-	if ((je = get_active_je(jds)) == NULL)
+	if ((je = get_active_je(jds)) == NULL) {
+		fprintf(stderr,
+		    "je_mount: cannot find active jail environment for '%s'\n",
+		    zfs_get_name(jds));
 		return (1);
+	}
 
-	if (zfs_prop_set(je, "mountpoint", mountpoint) != 0)
+	/*
+	 * XXX: work-around dying jails
+	 *
+	 * A dying jail can prevent the backing dataset from being unmounted.
+	 * Do a forced unmount until dying jails can be cleaned properly.
+	 */
+	if (je_unmount(je, MNT_FORCE) != 0) {
+		char mp[ZFS_MAXPROPLEN];
+
+		zfs_prop_get(je, ZFS_PROP_MOUNTPOINT, mp, sizeof(mp),
+		    NULL, NULL, 0, B_FALSE);
+		fprintf(stderr,
+		    "je_mount: cannot unmount '%s' from '%s'\n",
+		    zfs_get_name(je), mp);
 		return (1);
+	}
 
-	if (zfs_is_mounted(je, NULL))
-		return (0);
+	if (zfs_prop_set(je, "mountpoint", mountpoint) != 0) {
+		fprintf(stderr,
+		    "je_mount: cannot set mountpoint for '%s' at '%s'\n",
+		    zfs_get_name(je), mountpoint);
+		return (1);
+	}
 
 	libzfs_add_handle(&cb, je);
 	zfs_iter_dependents(je, B_TRUE, gather_cb, &cb);

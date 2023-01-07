@@ -56,5 +56,5 @@ int je_activate(zfs_handle_t *, const char *);
 int je_destroy(zfs_handle_t *);
 int je_mount(zfs_handle_t *, const char *);
 int je_swapin(zfs_handle_t *, zfs_handle_t *);
-int je_unmount(zfs_handle_t *);
+int je_unmount(zfs_handle_t *, int);
 

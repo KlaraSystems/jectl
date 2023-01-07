@@ -29,30 +29,52 @@
 
 #include "jectl.h"
 
+static void
+usage(void)
+{
+	fprintf(stderr, "usage: jectl umount [-f] <jailname>\n");
+	exit(1);
+}
+
 /*
  * unmount zhp and child datasets inheriting zhp's mountpoint
  */
 int
-je_unmount(zfs_handle_t *zhp)
+je_unmount(zfs_handle_t *zhp, int flags)
 {
 	if (!zfs_is_mounted(zhp, NULL))
 		return (0);
 
-	return (zfs_unmountall(zhp, 0));
+	return (zfs_unmountall(zhp, flags));
 }
 
 static int
 jectl_unmount(int argc, char **argv)
 {
+	int c;
 	int error;
+	int flags = 0;
 	zfs_handle_t *je, *jds;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: jectl umount <jailname>\n");
-		return (1);
+	while ((c = getopt(argc, argv, "f")) != -1) {
+		switch (c) {
+		case 'f':
+			flags |= MNT_FORCE;
+			break;
+		case '?':
+			usage();
+		}
 	}
 
-	if ((jds = get_jail_dataset(argv[1])) == NULL)
+	argc -= optind;
+	argv += optind;
+
+	if (argc != 1) {
+		fprintf(stderr, "must provide jail name\n");
+		usage();
+	}
+
+	if ((jds = get_jail_dataset(argv[0])) == NULL)
 		return (1);
 
 	if ((je = get_active_je(jds)) == NULL) {
@@ -60,7 +82,7 @@ jectl_unmount(int argc, char **argv)
 		return (1);
 	}
 
-	error = je_unmount(je);
+	error = je_unmount(je, flags);
 
 	zfs_close(je);
 	zfs_close(jds);

@@ -240,7 +240,7 @@ je_swapin(zfs_handle_t *jds, zfs_handle_t *target)
 		return (0);
 	}
 
-	if (je_unmount(src) != 0 || je_unmount(target) != 0) {
+	if (je_unmount(src, 0) != 0 || je_unmount(target, 0) != 0) {
 		zfs_close(src);
 		return (1);
 	}
