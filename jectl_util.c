@@ -47,7 +47,7 @@ get_jail_dataset(const char *jailname)
 zfs_handle_t *
 get_active_je(zfs_handle_t *jds)
 {
-	char *je_name;
+	const char *je_name;
 
 	if (get_property(jds, "je:active", &je_name) != 0)
 		return (NULL);
@@ -56,7 +56,7 @@ get_active_je(zfs_handle_t *jds)
 }
 
 int
-get_property(zfs_handle_t *zhp, const char *property, char **val)
+get_property(zfs_handle_t *zhp, const char *property, const char **val)
 {
 	int error;
 	nvlist_t *nvl, *propval;
@@ -85,7 +85,7 @@ je_copy_user_props(zfs_handle_t *src, zfs_handle_t *target)
 {
 	struct nvpair *nvp;
 	nvlist_t *nvl, *propval, *nnvl;
-	char *value;
+	const char *value;
 
 	if (nvlist_alloc(&nnvl, NV_UNIQUE_NAME, 0) != 0)
 		return (ENOMEM);

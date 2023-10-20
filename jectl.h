@@ -45,7 +45,7 @@ extern libzfs_handle_t *lzh;
 extern const char *jepool;
 extern const char *jeroot;
 
-int get_property(zfs_handle_t *, const char *, char **);
+int get_property(zfs_handle_t *, const char *, const char **);
 
 zfs_handle_t * get_jail_dataset(const char *);
 zfs_handle_t * get_active_je(zfs_handle_t *);

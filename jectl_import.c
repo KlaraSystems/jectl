@@ -43,7 +43,7 @@ je_import(const char *import_name)
 	zfs_handle_t *zhp;
 	recvflags_t flags = { .nomount = 1 };
 	char name[ZFS_MAXPROPLEN];
-	char *default_je;
+	const char *default_je;
 	struct renameflags rflags = { 0 };
 
 	snprintf(name, sizeof(name), "%s/jectl.XXXXXX", jeroot);

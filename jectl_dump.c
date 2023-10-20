@@ -35,7 +35,7 @@ static void
 print_je(zfs_handle_t *je)
 {
 	char *name;
-	char *value;
+	const char *value;
 	char buffer[ZFS_MAXPROPLEN];
 
 	name = strdup(zfs_get_name(je));
