@@ -39,7 +39,7 @@ struct compare_info {
 static bool
 is_equal(zfs_handle_t *a, zfs_handle_t *b, const char *property)
 {
-	char *astr, *bstr;
+	const char *astr, *bstr;
 	int error1, error2;
 
 	error1 = get_property(a, property, &astr);
@@ -60,7 +60,7 @@ compare_je(zfs_handle_t *zhp, void *arg)
 {
 	struct compare_info *ci __unused;
 	zfs_handle_t *je;
-	char *v1, *v2;
+	const char *v1, *v2;
 
 	ci = arg;
 
